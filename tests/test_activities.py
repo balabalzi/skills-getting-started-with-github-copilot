@@ -2,68 +2,94 @@ import pytest
 
 
 def test_get_activities_returns_all_activities(client):
+    # Arrange
+    # (no setup needed; using client and in-memory data)
+
+    # Act
     resp = client.get("/activities")
-    assert resp.status_code == 200
     data = resp.json()
+
+    # Assert
+    assert resp.status_code == 200
     assert isinstance(data, dict)
-    # Expect some known keys from the sample data
     assert "Chess Club" in data
     assert "Programming Class" in data
 
 
 def test_signup_success_adds_participant(client):
+    # Arrange
     activity = "Chess Club"
     email = "testuser@mergington.edu"
 
+    # Act
     resp = client.post(f"/activities/{activity}/signup?email={email}")
-    assert resp.status_code == 200
-    json = resp.json()
-    assert "Signed up" in json.get("message", "")
+    verify_resp = client.get("/activities")
 
-    # Verify participant added
-    get_resp = client.get("/activities")
-    participants = get_resp.json()[activity]["participants"]
-    assert email in participants
+    # Assert
+    assert resp.status_code == 200
+    assert "Signed up" in resp.json().get("message", "")
+    assert email in verify_resp.json()[activity]["participants"]
 
 
 def test_signup_nonexistent_activity_returns_404(client):
-    resp = client.post("/activities/NotAnActivity/signup?email=foo@bar.com")
+    # Arrange
+    activity = "NotAnActivity"
+    email = "foo@bar.com"
+
+    # Act
+    resp = client.post(f"/activities/{activity}/signup?email={email}")
+
+    # Assert
     assert resp.status_code == 404
 
 
 def test_signup_already_signed_up_returns_400(client):
+    # Arrange
     activity = "Basketball Team"
-    # alex@mergington.edu is already in sample data
-    email = "alex@mergington.edu"
+    email = "alex@mergington.edu"  # Already in sample data
 
+    # Act
     resp = client.post(f"/activities/{activity}/signup?email={email}")
+
+    # Assert
     assert resp.status_code == 400
 
 
 def test_unregister_success_removes_participant(client):
+    # Arrange
     activity = "Tennis Club"
     email = "james@mergington.edu"
+    verify_before = client.get("/activities").json()[activity]["participants"]
 
-    # Ensure present first
-    get_resp = client.get("/activities")
-    assert email in get_resp.json()[activity]["participants"]
-
+    # Act
     resp = client.post(f"/activities/{activity}/unregister?email={email}")
-    assert resp.status_code == 200
+    verify_after = client.get("/activities").json()[activity]["participants"]
 
-    # Verify removed
-    get_resp = client.get("/activities")
-    assert email not in get_resp.json()[activity]["participants"]
+    # Assert
+    assert resp.status_code == 200
+    assert email in verify_before
+    assert email not in verify_after
 
 
 def test_unregister_not_signed_up_returns_404(client):
+    # Arrange
     activity = "Science Club"
     email = "notpresent@mergington.edu"
 
+    # Act
     resp = client.post(f"/activities/{activity}/unregister?email={email}")
+
+    # Assert
     assert resp.status_code == 404
 
 
 def test_unregister_nonexistent_activity_returns_404(client):
-    resp = client.post("/activities/Nope/unregister?email=foo@bar.com")
+    # Arrange
+    activity = "Nope"
+    email = "foo@bar.com"
+
+    # Act
+    resp = client.post(f"/activities/{activity}/unregister?email={email}")
+
+    # Assert
     assert resp.status_code == 404
